@@ -4,6 +4,7 @@ const fs = require('fs');
 
 const pathToFiles = './files';
 
+
 const requestListener = (req, res) => {
 
     if(req.url === '/get' && req.method == 'GET') {
