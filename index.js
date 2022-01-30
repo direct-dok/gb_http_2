@@ -35,7 +35,8 @@ function cookieArrToObject(cookieArray) {
 
 const requestListener = (req, res) => {
 
-    const cookieArray = parseCookie(req.headers.cookie);
+    let cookieArray = null;
+    if(req.headers.cookie) cookieArray = parseCookie(req.headers.cookie);
 
     if(req.url === '/auth' && req.method == 'POST') {
 
@@ -123,8 +124,56 @@ const requestListener = (req, res) => {
 
 
     if(req.url === '/delete' && req.method == 'DELETE') {
-        res.writeHead(200);
-        res.end('success');
+
+        let authObj = null;
+        if(cookieArray) {
+            authObj = cookieArrToObject(cookieArray);
+        } else {
+            res.writeHead(401);
+            res.end('Authorization data is missing');
+        }
+
+        if(authObj.authorized == userAuthPost.authorized && authObj.userId == userAuthPost.userId) {
+
+            req.on('data', (chunk) => {
+                fileData = JSON.parse(chunk);
+
+                if(fileData.filename) {
+                    console.log(fileData);
+
+                    fs.access(`files/${fileData.filename}`, function(error){
+
+                        if(error) {
+                            res.writeHead(404);
+                            res.end('File not found');
+                        } else {
+
+                            fs.unlink(`files/${fileData.filename}`, function(err){
+                                if(err) {
+                                    res.writeHead(415);
+                                    res.end(err);
+                                }
+                                res.writeHead(200);
+                                res.end('File deleted successfully');
+                            }); 
+
+                        }
+
+                    });
+  
+                } else {
+                    res.writeHead(415);
+                    res.end('It is impossible to delete the file, most likely there is no such file, or you did not specify the file name');
+                }
+                
+            });
+
+            
+        } else {
+            res.writeHead(401);
+            res.end('The user is not logged in');
+        }
+        
     } else if(req.url === '/delete' && req.method != 'DELETE') {
         res.writeHead(405);
         res.end('HTTP method not allowed');
